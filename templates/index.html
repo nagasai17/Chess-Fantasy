@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Fantasy</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/chessboard.js"></script>
+    <link rel="stylesheet" href="/static/chessboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chess.js/chess.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.css" integrity="sha512-KRrFrm+GAPOl6xxootmuQHKDoGiR2Gtifqd6XFUH++sluyhWui3vJCkmt0FN0k/H9TQn0f4sZFltC+XnQAKKvQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.js" integrity="sha512-TGU/O51undmqzEuGui6G+td333I3Wufy17Foi8O5TUc4z9rSJg+IpGmRCnLl5s0MUycrdj7vpD6YMsbRppVVzw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet"
+            href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
+            integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU"
+            crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+        <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
+            integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
+            crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"
+            integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+    <h1><center>Chess Fantasy</center></h1>
+    <div id="board" style="width: 400px"></div>
+    <button id="showPositionBtn">Show Position</button>
+    <script src="/static/app.js"></script>
+
+    <div id="promotion-modal" style="display: none;">
+        <button onclick="onPromotionPieceSelected('q')">Queen</button>
+        <button onclick="onPromotionPieceSelected('r')">Rook</button>
+        <button onclick="onPromotionPieceSelected('b')">Bishop</button>
+        <button onclick="onPromotionPieceSelected('n')">Knight</button>
+    </div>
+</body>
+</html>
