@@ -5,10 +5,118 @@ from flask_cors import CORS
 
   # This will allow all CORS requests
 import chess
+import MappingforIds
 
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app)
+
+import sqlite3
+#initialising database
+def init_db():
+    conn = sqlite3.connect('chess_fantasy.db')
+    cursor = conn.cursor()
+
+    # Create Users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            email TEXT,
+            total_points INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Create Selected Pieces table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS selected_pieces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            piece TEXT NOT NULL,
+            color TEXT NOT NULL,
+            points INTEGER DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+# Call this function to initialize the database
+init_db()
+
+
+
+#Creating the Board
+
+@app.route('/initialize_board', methods=['GET'])
+def initialize_board():
+    board = chess.Board()  # Start with the initial position
+    piece_ids = {}
+
+    # Traverse all squares on the board
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+            piece_id = MappingforIds.MappingIds[chess.square_name(square)]
+            piece_ids[chess.square_name(square)] = {
+                "id": piece_id,
+                "type": piece.piece_type,
+                "color": "white" if piece.color else "black",
+                "place" : chess.square_name(square)
+            }
+            MappingforIds.GettingIdsFromBoard[square] = piece_id
+
+    return jsonify({
+        "success": True,
+        "fen": board.fen(),  # Initial FEN for the board position
+        "pieces": piece_ids
+    })
+
+#adding User
+@app.route('/add_user', methods=['POST'])
+def add_user():
+    data = request.json
+    username = data['username']
+    email = data.get('email', None)
+
+    conn = sqlite3.connect('chess_fantasy.db')
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT INTO users (username, email) VALUES (?, ?)', (username, email))
+    conn.commit()
+    conn.close()
+
+    return jsonify(success=True, message="User added successfully!")
+
+
+@app.route('/select_piece', methods=['POST'])
+def select_piece():
+    data = request.json
+    user_id = data['user_id']
+    piece = data['piece']
+    color = data['color']
+
+    conn = sqlite3.connect('chess_fantasy.db')
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT INTO selected_pieces (user_id, piece, color) VALUES (?, ?, ?)', (user_id, piece, color))
+    conn.commit()
+    conn.close()
+
+    return jsonify(success=True, message="Piece selected successfully!")
+
+
+def update_points(user_id, points):
+    conn = sqlite3.connect('chess_fantasy.db')
+    cursor = conn.cursor()
+
+    # Update total points for the user
+    cursor.execute('UPDATE users SET total_points = total_points + ? WHERE user_id = ?', (points, user_id))
+
+    # Commit the changes
+    conn.commit()
+    conn.close()
 
 # Serve the main page
 @app.route('/')
@@ -115,19 +223,22 @@ def make_move():
     piece = board.piece_at(from_square_index)
     print(piece)
     # Validate the move: Check if it's the correct player's turn
-    if (current_turn and piece.color != chess.WHITE) or (not current_turn and piece.color != chess.BLACK):
+    if (piece and current_turn and piece.color != chess.WHITE) or (not current_turn and piece.color != chess.BLACK):
         return jsonify(success=False, error="It's not your turn")
     
     if move in board.legal_moves:
             try:
                 iscaptured  = False if board.piece_at(to_square_index) is None else True 
-                board.push(move)
-                
-                # Check if the move involved capturing a piece
-                print(move,iscaptured)
                 if iscaptured:
                     captured_piece = board.piece_at(to_square_index)
-                    if captured_piece:
+                board.push(move)
+                MappingforIds.GettingIdsFromBoard[to_square_index] = MappingforIds.GettingIdsFromBoard[from_square_index]
+                MappingforIds.GettingIdsFromBoard.pop(from_square_index)
+                # Check if the move involved capturing a piece
+                print(move,iscaptured,MappingforIds.GettingIdsFromBoard)
+                if iscaptured:
+                    capturing_piece = board.piece_at(to_square_index)
+                    if capturing_piece:
                         # Points system for captured pieces
                         points = {
                             chess.PAWN: 1,
@@ -135,10 +246,29 @@ def make_move():
                             chess.BISHOP: 3,
                             chess.ROOK: 5,
                             chess.QUEEN: 9
-                        }.get(captured_piece.piece_type, 0)
-
-                        print(f"Points added: {points}")
+                        }
+                        
+                        if(points[capturing_piece.piece_type]- points[captured_piece.piece_type] <=0):
+                            pointstobeadded = points[captured_piece.piece_type]
+                        else:
+                            pointstobeadded = points[capturing_piece.piece_type]- points[captured_piece.piece_type]
+                        print(f"Points added: {pointstobeadded} because {capturing_piece.piece_type} captured {captured_piece.piece_type} with Id of the killing piece is {MappingforIds.GettingIdsFromBoard[to_square_index]}   and Killing piece is at {chess.square_name(to_square_index)}")
+                        MappingforIds.totalpoints[MappingforIds.MappingSquares[MappingforIds.GettingIdsFromBoard[to_square_index]]] += pointstobeadded
+                        print(MappingforIds.totalpoints)
                         # You can add points to a player’s score here.
+
+                        #trying to update the points!!!!
+                        # Find the user who owns the captured piece and update their score
+                    # conn = sqlite3.connect('chess_fantasy.db')
+                    # cursor = conn.cursor()
+
+                    # cursor.execute('''
+                    #     SELECT user_id FROM selected_pieces WHERE piece = ? AND color = ?
+                    # ''', (str(captured_piece), 'black' if board.turn else 'white'))
+
+                    # result = cursor.fetchone()
+                    # if result:
+                    #     update_points(result[0], points)
 
                 return jsonify(success=True, newPosition=board.fen(), move = move)
 
@@ -147,9 +277,6 @@ def make_move():
 
     else:
         return jsonify(success=False, error="Invalid move for the current player")
-
-    
-
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

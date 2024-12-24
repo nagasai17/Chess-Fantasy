@@ -1,44 +1,63 @@
-var game = new Chess();
+var board;
+var game;
 
-        // Initialize the chessboard
-        var board = Chessboard('board', {
-            draggable: true,
-            position: 'start',
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-            dropOffBoard: 'snapback',
-            onDrop: function (source, target) {
-                // Make the move on the chess.js game logic
-                var piece = game.get(source); // Get the piece at the source square
-                if (piece && piece.type === 'p' && (target[1] === '8' || target[1] === '1')) {
-                    // Show the promotion modal and save necessary data
-                    showPromotionModal(piece.color, source, target);
-                    return 'snapback'; // Temporarily snap the piece back
-                }
-               
-                // var move = game.move({ from: source, to: target });
+// Fetch the initial board state from the backend
+function initializeBoard() {
+    fetch('/initialize_board')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Initialize chess.js with the returned FEN
+                game = new Chess(data.fen);
 
-                
-                // // If the move is invalid, snap the piece back
-                // if (move === null) return 'snapback';
+                // Display piece IDs for debugging (optional)
+                console.log("Piece IDs:", data.pieces);
 
-       
-                
+                // Initialize the chessboard
+                var board = Chessboard('board', {
+                    draggable: true,
+                    position: data.fen,
+                    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                    dropOffBoard: 'snapback',
+                    onDrop: function (source, target) {
+                        // Make the move on the chess.js game logic
+                        var piece = game.get(source); // Get the piece at the source square
+                        if (piece && piece.type === 'p' && (target[1] === '8' || target[1] === '1')) {
+                            // Show the promotion modal and save necessary data
+                            showPromotionModal(piece.color, source, target);
+                            return 'snapback'; // Temporarily snap the piece back
+                        }
+                    
+                        // var move = game.move({ from: source, to: target });
 
-                // // Log the move for debugging
-                // console.log(`Move: ${move.from} -> ${move.to} (${move.san})`);
-                // console.log({move});
-                // console.log({source});
+                        
+                        // // If the move is invalid, snap the piece back
+                        // if (move === null) return 'snapback';
 
-                sendMoveToBackend(source, target, game.fen());
-                // Show the move in the UI
-                //$('#moveLog').text(`Last move: ${move.from} -> ${move.to}`);
+            
+                        
 
-                // Send the move to your API
-                //sendMoveToBackend(move.from, move.to, move.san);
-                
-                
+                        // // Log the move for debugging
+                        // console.log(`Move: ${move.from} -> ${move.to} (${move.san})`);
+                        // console.log({move});
+                        // console.log({source});
+                        else{
+                        sendMoveToBackend(source, target, game.fen());
+                        
+                        }// Show the move in the UI
+                        //$('#moveLog').text(`Last move: ${move.from} -> ${move.to}`);
+
+                        // Send the move to your API
+                        //sendMoveToBackend(move.from, move.to, move.san);
+                        
+                        
+                    }
+                });
+                window.pieceIds = data.pieces;
             }
-        });
+        })
+}
+initializeBoard()
 
         
 
@@ -112,7 +131,7 @@ function sendMoveToBackend(from, to, fen) {
     .then(data => {
         console.log("printing data");
         console.log(data);
-        console.log("donewih data object");
+        console.log("done with data object");
         if (data.success) {
             // Update the chessboard with the new FEN
             game.load(data.newPosition);  // Update the internal game logic
